@@ -30,26 +30,53 @@ int main() {
     double v = v_min;
     double f = 0.0; // at exactly v_min there is no transition 
     
-    std::ofstream outFile("fraction_output.csv");
-    outFile << "v,P\n";
+    // Convergence check for different number of steps
+    std::ofstream stepFile("MB_convergence_by_steps.csv");
+    stepFile << "v_steps,Final_Fraction\n";
 
-    for (int i = 0; i < v_steps; i++) {
-        outFile << std::fixed << std::setprecision(10) << v << "," << f << "\n";
+    double fixed_v_max = 100000.0;
+    std::vector<int> step_counts = {10,15,17,20,23,25,28,30,32,35,40,45,50,70,100,140,180,250,300,350,400};
 
-        double k1 = fv(v, f);
-        double k2 = fv(v + dv / 2.0, f + (dv / 2.0) * k1);
-        double k3 = fv(v + dv / 2.0, f + (dv / 2.0) * k2);
-        double k4 = fv(v + dv, f + dv * k3);
+    for (int steps : step_counts) {
+        double v = v_min;
+        double f = 0.0;
+        double dv = (fixed_v_max - v_min) / double(steps);
 
-        f = f + (dv / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
-        v = v + dv;
+        for (int i = 0; i < steps; i++) {
+            double k1 = fv(v, f);
+            double k2 = fv(v + dv / 2.0, f + (dv / 2.0) * k1);
+            double k3 = fv(v + dv / 2.0, f + (dv / 2.0) * k2);
+            double k4 = fv(v + dv, f + dv * k3);
+            f += (dv / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+            v += dv;
+        }
+        stepFile << steps << "," << std::scientific << f << "\n";
     }
+    stepFile.close();
 
-    outFile << v << "," << f << "\n";
-    outFile.close();
+    // Fixed step size, changing v_max.
+    std::ofstream rangeFile("MB_convergence_by_vmax.csv");
+    rangeFile << "v_max,Final_Fraction\n";
 
-    std::cout << "v_min: " << v_min << std::endl;
-    std::cout << "Final Fraction: " << f << std::endl;
+    int fixed_steps = 1000;
+    for (double current_v_max = 50000.0; current_v_max <= 100000.0; current_v_max += 1000.0) {
+        double v = v_min;
+        double f = 0.0;
+        double dv = (current_v_max - v_min) / double(fixed_steps);
+
+        for (int i = 0; i < fixed_steps; i++) {
+            double k1 = fv(v, f);
+            double k2 = fv(v + dv / 2.0, f + (dv / 2.0) * k1);
+            double k3 = fv(v + dv / 2.0, f + (dv / 2.0) * k2);
+            double k4 = fv(v + dv, f + dv * k3);
+            f += (dv / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+            v += dv;
+        }
+        rangeFile << std::fixed << current_v_max << "," << std::scientific << f << "\n";
+    }
+    rangeFile.close();
+
+    std::cout << "Simulation Complete" << std::endl;
 
     return 0;
 }
